@@ -1,0 +1,29 @@
+let OLD_HTML;function captureHTML(){var html=document.documentElement.outerHTML;OLD_HTML=html;document.removeEventListener('DOMContentLoaded',captureHTML);}
+document.addEventListener('DOMContentLoaded',captureHTML);const processScript=(params,content,place)=>{if(typeof place==='undefined'){place='head';}
+sessionStorage.setItem('SALLA_LIVE_JS',JSON.stringify({params,content,place,}))
+document.documentElement.innerHTML=OLD_HTML
+window.dispatchEvent(new Event('resize'));if(!content){return null;}
+if(params!=""){params=JSON.parse(params);Object.keys(params).forEach(function(key){salla.config.set(key,params[key]);});}
+let script=document.createElement('script')
+content=`(function() {${content}})()`
+script.innerHTML=content
+script.type='text/javascript'
+if(place==='head'){document.head.appendChild(script)}else{document.body.appendChild(script)}}
+if(typeof salla!=='undefined'){salla.onReady(function(){let liveJs=sessionStorage.getItem('SALLA_LIVE_JS')
+if(liveJs){liveJs=JSON.parse(liveJs)
+processScript(liveJs.params,liveJs.content,liveJs.place)}})}
+const dataURItoBlob=(dataURI)=>{const byteString=window.atob(dataURI.split(',')[1])
+const mimeString=dataURI.split(',')[0].split(':')[1].split(';')[0]
+let ab=new ArrayBuffer(byteString.length)
+let ia=new Uint8Array(ab)
+for(let i=0;i<byteString.length;++i){ia[i]=byteString.charCodeAt(i)}
+return new Blob([ab],{type:mimeString})}
+let getLiveSnippetContent=(fileUri)=>{let blob=dataURItoBlob(fileUri)
+return blob.text()}
+const handleLiveJs=(event)=>{let message=event.data.message
+let value=event.data.value
+let place=event.data.place
+let params=event.data.params
+switch(message){case 'sendFile':getLiveSnippetContent(value).then((content)=>{if(content!==''||content!==undefined){processScript(params,content,place)}}).catch((err)=>console.error(err))
+break}}
+window.addEventListener('message',handleLiveJs)
